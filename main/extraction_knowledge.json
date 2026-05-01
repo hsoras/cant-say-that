@@ -1,0 +1,117 @@
+{
+    "chain_stats": {
+        "L1": {
+            "visits": 1,
+            "rewards": 0.0
+        },
+        "L2": {
+            "visits": 1,
+            "rewards": 0.0
+        },
+        "L3": {
+            "visits": 1,
+            "rewards": 0.0
+        },
+        "L4": {
+            "visits": 1,
+            "rewards": 0.0
+        },
+        "L5": {
+            "visits": 1,
+            "rewards": 0.5
+        },
+        "L6": {
+            "visits": 1,
+            "rewards": 0.0
+        },
+        "L7": {
+            "visits": 1,
+            "rewards": 0.0
+        },
+        "L8": {
+            "visits": 1,
+            "rewards": 0.0
+        },
+        "L9": {
+            "visits": 1,
+            "rewards": 0.0
+        },
+        "L10": {
+            "visits": 1,
+            "rewards": 0.0
+        },
+        "L11": {
+            "visits": 1,
+            "rewards": 0.0
+        },
+        "L12": {
+            "visits": 1,
+            "rewards": 0.0
+        },
+        "L13": {
+            "visits": 1,
+            "rewards": 0.0
+        },
+        "L14": {
+            "visits": 1,
+            "rewards": 0.5
+        },
+        "H1": {
+            "visits": 1,
+            "rewards": 0.0
+        },
+        "H2": {
+            "visits": 1,
+            "rewards": 0.0
+        },
+        "H3": {
+            "visits": 1,
+            "rewards": 0.0
+        },
+        "H4": {
+            "visits": 1,
+            "rewards": 0.5
+        },
+        "H5": {
+            "visits": 1,
+            "rewards": 0.0
+        },
+        "H6": {
+            "visits": 1,
+            "rewards": 0.0
+        },
+        "H7": {
+            "visits": 1,
+            "rewards": 0.0
+        },
+        "H8": {
+            "visits": 1,
+            "rewards": 0.5
+        },
+        "H9": {
+            "visits": 1,
+            "rewards": 0.5
+        },
+        "H10": {
+            "visits": 1,
+            "rewards": 0.0
+        },
+        "H11": {
+            "visits": 1,
+            "rewards": 0.0
+        },
+        "H12": {
+            "visits": 1,
+            "rewards": 0.5
+        },
+        "H13": {
+            "visits": 1,
+            "rewards": 0.0
+        },
+        "H14": {
+            "visits": 1,
+            "rewards": 0.0
+        }
+    },
+    "global_visits": 28
+}
