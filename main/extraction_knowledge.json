@@ -1,67 +1,67 @@
 {
     "chain_stats": {
         "L1": {
-            "visits": 1,
+            "visits": 3,
             "rewards": 0.0
         },
         "L2": {
-            "visits": 1,
-            "rewards": 0.0
+            "visits": 4,
+            "rewards": 0.5
         },
         "L3": {
-            "visits": 1,
+            "visits": 3,
             "rewards": 0.0
         },
         "L4": {
-            "visits": 1,
+            "visits": 4,
             "rewards": 0.0
         },
         "L5": {
-            "visits": 1,
-            "rewards": 0.5
+            "visits": 4,
+            "rewards": 0.0
         },
         "L6": {
-            "visits": 1,
+            "visits": 3,
             "rewards": 0.0
         },
         "L7": {
-            "visits": 1,
+            "visits": 4,
             "rewards": 0.0
         },
         "L8": {
-            "visits": 1,
-            "rewards": 0.0
+            "visits": 4,
+            "rewards": 0.5
         },
         "L9": {
-            "visits": 1,
+            "visits": 3,
             "rewards": 0.0
         },
         "L10": {
-            "visits": 1,
+            "visits": 3,
             "rewards": 0.0
         },
         "L11": {
-            "visits": 1,
+            "visits": 4,
             "rewards": 0.0
         },
         "L12": {
-            "visits": 1,
+            "visits": 4,
             "rewards": 0.0
         },
         "L13": {
-            "visits": 1,
+            "visits": 3,
             "rewards": 0.0
         },
         "L14": {
-            "visits": 1,
-            "rewards": 0.5
+            "visits": 4,
+            "rewards": 0.0
         },
         "H1": {
-            "visits": 1,
+            "visits": 6,
             "rewards": 0.0
         },
         "H2": {
-            "visits": 1,
+            "visits": 2,
             "rewards": 0.0
         },
         "H3": {
@@ -69,28 +69,28 @@
             "rewards": 0.0
         },
         "H4": {
-            "visits": 1,
-            "rewards": 0.5
+            "visits": 2,
+            "rewards": 0.0
         },
         "H5": {
-            "visits": 1,
+            "visits": 2,
             "rewards": 0.0
         },
         "H6": {
-            "visits": 1,
+            "visits": 4,
             "rewards": 0.0
         },
         "H7": {
-            "visits": 1,
+            "visits": 2,
             "rewards": 0.0
         },
         "H8": {
-            "visits": 1,
-            "rewards": 0.5
+            "visits": 6,
+            "rewards": 0.0
         },
         "H9": {
             "visits": 1,
-            "rewards": 0.5
+            "rewards": 0.0
         },
         "H10": {
             "visits": 1,
@@ -101,17 +101,47 @@
             "rewards": 0.0
         },
         "H12": {
-            "visits": 1,
+            "visits": 6,
             "rewards": 0.5
         },
         "H13": {
-            "visits": 1,
+            "visits": 4,
             "rewards": 0.0
         },
         "H14": {
-            "visits": 1,
+            "visits": 3,
             "rewards": 0.0
         }
     },
-    "global_visits": 28
+    "global_visits": 48,
+    "ucb_scores": {
+        "L1": 1.606487059997246,
+        "L2": 1.5162586048085906,
+        "L3": 1.606487059997246,
+        "L4": 1.3912586048085906,
+        "L5": 1.3912586048085906,
+        "L6": 1.606487059997246,
+        "L7": 1.3912586048085906,
+        "L8": 1.5162586048085906,
+        "L9": 1.606487059997246,
+        "L10": 1.606487059997246,
+        "L11": 1.3912586048085906,
+        "L12": 1.3912586048085906,
+        "L13": 1.606487059997246,
+        "L14": 1.3912586048085906,
+        "H1": 1.1359578940124926,
+        "H2": 1.9675367876885788,
+        "H3": 2.7825172096171813,
+        "H4": 1.9675367876885788,
+        "H5": 1.9675367876885788,
+        "H6": 1.3912586048085906,
+        "H7": 1.9675367876885788,
+        "H8": 1.1359578940124926,
+        "H9": 2.7825172096171813,
+        "H10": 2.7825172096171813,
+        "H11": 2.7825172096171813,
+        "H12": 1.2192912273458258,
+        "H13": 1.3912586048085906,
+        "H14": 1.606487059997246
+    }
 }
