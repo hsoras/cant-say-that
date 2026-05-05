@@ -130,9 +130,7 @@ class GeminiAttacker(AttackerLLM):
             model=self.model_name,
             contents=contents,
             config=self._types.GenerateContentConfig(
-                temperature=0.8,
-                presence_penalty=1.0,
-                frequency_penalty=1.0,
+                temperature=0.9,
             ),
         )
         text = response.text.strip()
@@ -203,7 +201,7 @@ class OllamaAttacker(AttackerLLM):
                 f"Locally available models: {listed}"
             )
 
-    def _chat(self, messages: list, *, operation: str, timeout: int = 300, temperature: float = None, presence_penalty: float = None, frequency_penalty: float = None) -> str:
+    def _chat(self, messages: list, *, operation: str, timeout: int = 300, temperature: float = None, presence_penalty: float = None, frequency_penalty: float = None, repeat_penalty: float = None) -> str:
         t0 = time.perf_counter()
         logger.debug(
             "Ollama START | op=%s | model=%s | n_messages=%d",
@@ -230,6 +228,8 @@ class OllamaAttacker(AttackerLLM):
             options["presence_penalty"] = presence_penalty
         if frequency_penalty is not None:
             options["frequency_penalty"] = frequency_penalty
+        if repeat_penalty is not None:
+            options["repeat_penalty"] = repeat_penalty
         if options:
             payload["options"] = options
             
@@ -304,9 +304,8 @@ class OllamaAttacker(AttackerLLM):
         text = self._chat(
             messages, 
             operation="generate_prompt",
-            temperature=0.8,
-            presence_penalty=1.0,
-            frequency_penalty=1.0
+            temperature=0.9,
+            repeat_penalty=1.5
         )
         return _extract_prompt_text(text), None
     def evaluate_response(self, goal: str, target_response: str) -> float:
