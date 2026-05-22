@@ -1,5 +1,5 @@
 # llm-hacker
-This is the code for my automated llm jailbreaker. The intent is to start with a goal that would be blocked by the target llm's safety policies or prompt instructions and send a series of prompts which would eventually result in the llm ignoring its safety policies and completing the goal.
+This is the code for my automated llm jailbreaker. The intent is to start with a goal that would be blocked by the target llm's safety policies or prompt instructions and send a series of prompts which would eventually result in the llm ignoring its safety policies and completing the goal. Note: this doesn't really work right now, I need to test with larger models.
 
 # How it works
 There are 3 main components:
@@ -15,3 +15,8 @@ The attack proceeds in a series of turns. In each turn:
 4. The score table is updated. 
 
 The architecture is based on this paper, which uses the same apprach to try to leak an LLM's system prompt: https://arxiv.org/abs/2601.21233
+
+# How to run
+1. This uses python 3.14.3
+2. Set up the environment variables in the .env file. I'm testing it on Ollama models locally but you can change it to use Gemini too.
+3. 

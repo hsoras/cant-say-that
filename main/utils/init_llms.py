@@ -7,6 +7,8 @@ from attackerllm import (
     GeminiWithOllamaFallback,
     OllamaAPIError,
     OllamaAttacker,
+    OpenRouterAPIError,
+    OpenRouterAttacker,
 )
 
 logger = logging.getLogger(__name__)
@@ -61,9 +63,20 @@ def init_llms():
             host = os.environ.get("OLLAMA_HOST", "http://127.0.0.1:11434")
             logger.info("Attacker backend: Ollama | model=%s | host=%s", attacker_model, host)
             attacker_llm = OllamaAttacker(model_name=attacker_model, host=host)
+        elif attacker_backend == "openrouter":
+            api_key = os.environ.get("OPENROUTER_API_KEY", "")
+            attacker_model = os.environ.get("OPENROUTER_ATTACKER_MODEL", "anthropic/claude-sonnet-4")
+            if not api_key.strip():
+                print(
+                    "OPENROUTER_API_KEY is not set. Export it with your OpenRouter API key.",
+                    file=sys.stderr,
+                )
+                sys.exit(1)
+            logger.info("Attacker backend: OpenRouter | model=%s", attacker_model)
+            attacker_llm = OpenRouterAttacker(api_key=api_key, model_name=attacker_model)
         else:
             print(
-                f"Unknown ATTACKER_BACKEND={attacker_backend!r}. Use 'gemini' or 'ollama'.",
+                f"Unknown ATTACKER_BACKEND={attacker_backend!r}. Use 'gemini', 'ollama', or 'openrouter'.",
                 file=sys.stderr,
             )
             sys.exit(1)
@@ -89,15 +102,26 @@ def init_llms():
             host = os.environ.get("OLLAMA_HOST", "http://127.0.0.1:11434")
             logger.info("Judge backend: Ollama | model=%s | host=%s", judge_model, host)
             judge_llm = OllamaAttacker(model_name=judge_model, host=host)
+        elif judge_backend == "openrouter":
+            api_key = os.environ.get("OPENROUTER_API_KEY", "")
+            judge_model = os.environ.get("OPENROUTER_JUDGE_MODEL", "openai/gpt-4o-mini")
+            if not api_key.strip():
+                print(
+                    "OPENROUTER_API_KEY is not set. Export it with your OpenRouter API key.",
+                    file=sys.stderr,
+                )
+                sys.exit(1)
+            logger.info("Judge backend: OpenRouter | model=%s", judge_model)
+            judge_llm = OpenRouterAttacker(api_key=api_key, model_name=judge_model)
         else:
             print(
-                f"Unknown JUDGE_BACKEND={judge_backend!r}. Use 'gemini' or 'ollama'.",
+                f"Unknown JUDGE_BACKEND={judge_backend!r}. Use 'gemini', 'ollama', or 'openrouter'.",
                 file=sys.stderr,
             )
             sys.exit(1)
 
         return attacker_llm, judge_llm
-    except OllamaAPIError as e:
+    except (OllamaAPIError, OpenRouterAPIError) as e:
         print(f"\n{e}", file=sys.stderr)
         sys.exit(1)
     except Exception as e:

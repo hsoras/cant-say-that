@@ -24,11 +24,9 @@ def _build_target_runner():
     if backend == "manual":
         logger.info("Target backend: manual paste mode")
         return _manual_target
-    if backend != "ollama":
-        raise ValueError(f"Unknown TARGET_BACKEND={backend!r}. Use 'manual' or 'ollama'.")
+    if backend not in ("ollama", "openrouter"):
+        raise ValueError(f"Unknown TARGET_BACKEND={backend!r}. Use 'manual', 'ollama', or 'openrouter'.")
 
-    host = os.environ.get("TARGET_OLLAMA_HOST", os.environ.get("OLLAMA_HOST", "http://127.0.0.1:11434")).rstrip("/")
-    model = os.environ.get("TARGET_OLLAMA_MODEL", "llama3.1:8b")
     timeout_s = int(os.environ.get("TARGET_TIMEOUT_SECONDS", "180"))
     framing = os.environ.get("TARGET_FRAMING", "lab").strip().lower()
     logger.info(
@@ -48,41 +46,102 @@ def _build_target_runner():
             f"Unknown TARGET_FRAMING={framing!r}. Use 'lab' or 'neutral'."
         )
 
-    logger.info("Target backend: Ollama | model=%s | host=%s", model, host)
-
     messages: list[dict[str, str]] = []
     if system_prompt:
         messages.append({"role": "system", "content": system_prompt})
 
-    def _send(payload: str) -> str:
-        wrapped_payload = f"{context_prefix}{payload}"
-        messages.append({"role": "user", "content": wrapped_payload})
-        try:
-            resp = requests.post(
-                f"{host}/api/chat",
-                json={"model": model, "messages": messages, "stream": False},
-                timeout=timeout_s,
+    # ── Ollama target ──
+    if backend == "ollama":
+        host = os.environ.get("TARGET_OLLAMA_HOST", os.environ.get("OLLAMA_HOST", "http://127.0.0.1:11434")).rstrip("/")
+        model = os.environ.get("TARGET_OLLAMA_MODEL", "llama3.1:8b")
+        logger.info("Target backend: Ollama | model=%s | host=%s", model, host)
+
+        def _send(payload: str) -> str:
+            wrapped_payload = f"{context_prefix}{payload}"
+            messages.append({"role": "user", "content": wrapped_payload})
+            try:
+                resp = requests.post(
+                    f"{host}/api/chat",
+                    json={"model": model, "messages": messages, "stream": False},
+                    timeout=timeout_s,
+                )
+                data = resp.json()
+            except requests.RequestException as e:
+                raise RuntimeError(f"Target Ollama request failed: {e}") from e
+            except ValueError as e:
+                raise RuntimeError(f"Target Ollama returned invalid JSON: {resp.text[:300]}") from e
+
+            if "error" in data:
+                raise RuntimeError(f"Target Ollama error: {data['error']}")
+            if resp.status_code != 200:
+                raise RuntimeError(f"Target Ollama HTTP {resp.status_code}: {resp.text[:300]}")
+
+            content = (data.get("message") or {}).get("content")
+            if not content:
+                raise RuntimeError(f"Target Ollama response missing message.content: {data!r}")
+            answer = str(content).strip()
+            messages.append({"role": "assistant", "content": answer})
+            print("\n" + "=" * 40)
+            print("🎯 TARGET RESPONSE (OLLAMA):")
+            print(answer)
+            print("=" * 40)
+            return answer
+
+        return _send
+
+    # ── OpenRouter target ──
+    if backend == "openrouter":
+        api_key = os.environ.get("OPENROUTER_API_KEY", "")
+        model = os.environ.get("OPENROUTER_TARGET_MODEL", "meta-llama/llama-3.1-8b-instruct")
+        if not api_key.strip():
+            raise ValueError(
+                "OPENROUTER_API_KEY is not set. Export it with your OpenRouter API key."
             )
-            data = resp.json()
-        except requests.RequestException as e:
-            raise RuntimeError(f"Target Ollama request failed: {e}") from e
-        except ValueError as e:
-            raise RuntimeError(f"Target Ollama returned invalid JSON: {resp.text[:300]}") from e
+        base_url = os.environ.get("OPENROUTER_BASE_URL", "https://openrouter.ai/api/v1").rstrip("/")
+        logger.info("Target backend: OpenRouter | model=%s | base_url=%s", model, base_url)
 
-        if "error" in data:
-            raise RuntimeError(f"Target Ollama error: {data['error']}")
-        if resp.status_code != 200:
-            raise RuntimeError(f"Target Ollama HTTP {resp.status_code}: {resp.text[:300]}")
+        def _send_openrouter(payload: str) -> str:
+            wrapped_payload = f"{context_prefix}{payload}"
+            messages.append({"role": "user", "content": wrapped_payload})
+            headers = {
+                "Authorization": f"Bearer {api_key}",
+                "Content-Type": "application/json",
+            }
+            body = {
+                "model": model,
+                "messages": messages,
+                "stream": False,
+            }
+            try:
+                resp = requests.post(
+                    f"{base_url}/chat/completions",
+                    headers=headers,
+                    json=body,
+                    timeout=timeout_s,
+                )
+                data = resp.json()
+            except requests.RequestException as e:
+                raise RuntimeError(f"Target OpenRouter request failed: {e}") from e
+            except ValueError as e:
+                raise RuntimeError(f"Target OpenRouter returned invalid JSON: {resp.text[:300]}") from e
 
-        content = (data.get("message") or {}).get("content")
-        if not content:
-            raise RuntimeError(f"Target Ollama response missing message.content: {data!r}")
-        answer = str(content).strip()
-        messages.append({"role": "assistant", "content": answer})
-        print("\n" + "=" * 40)
-        print("🎯 TARGET RESPONSE (OLLAMA):")
-        print(answer)
-        print("=" * 40)
-        return answer
+            if resp.status_code != 200:
+                err_msg = data.get("error", {}).get("message", resp.text[:300]) if isinstance(data, dict) else resp.text[:300]
+                raise RuntimeError(f"Target OpenRouter HTTP {resp.status_code}: {err_msg}")
 
-    return _send
+            choices = data.get("choices", [])
+            if not choices:
+                raise RuntimeError(f"Target OpenRouter response has no choices: {data!r}")
+            content = choices[0].get("message", {}).get("content")
+            if not content:
+                raise RuntimeError(f"Target OpenRouter response missing message.content: {data!r}")
+            answer = str(content).strip()
+            messages.append({"role": "assistant", "content": answer})
+            print("\n" + "=" * 40)
+            print("🎯 TARGET RESPONSE (OPENROUTER):")
+            print(answer)
+            print("=" * 40)
+            return answer
+
+        return _send_openrouter
+
