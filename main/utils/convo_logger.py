@@ -71,6 +71,60 @@ class ConvoLogger:
         self._write(f"# RUN ENDED — chain={chain}  best_score={best_score:.2f}  success={success}")
         self._write(f"{'#'*60}\n")
 
+    # ── MCTS-specific methods ──
+
+    def log_mcts_start(self, goal: str, attacker_model: str, target_model: str,
+                        judge_model: str, max_iterations: int, max_turns: int,
+                        branch_factor: int):
+        self._write(f"\n{'#'*60}")
+        self._write(f"# MCTS CAMPAIGN")
+        self._write(f"# Goal: {goal}")
+        self._write(f"# Attacker: {attacker_model}")
+        self._write(f"# Target:   {target_model}")
+        self._write(f"# Judge:    {judge_model}")
+        self._write(f"# Max Iterations: {max_iterations} | Max Turns: {max_turns} | Branch: {branch_factor}")
+        self._write(f"{'#'*60}\n")
+
+    def log_mcts_iteration(self, iteration: int, node_id: int, depth: int):
+        self._write(f"\n{'─'*60}")
+        self._write(f"MCTS ITERATION {iteration}")
+        self._write(f"  Selected Node: {node_id} (depth={depth})")
+        self._write(f"{'─'*60}")
+
+    def log_mcts_expansion(self, parent_id: int, children_skills: list[str]):
+        self._write(f"\n[EXPANSION] Parent Node {parent_id} → {len(children_skills)} children")
+        self._write(f"  Skills: {', '.join(children_skills)}")
+
+    def log_node_conversation(
+        self,
+        node_id: int,
+        turn: int,
+        skill: str,
+        attacker_prompt: str,
+        target_response: str,
+        judge_score: int,
+        reward: float,
+        is_terminal: bool,
+        parent_id: int | None = None,
+    ):
+        """Write a complete, searchable block for one MCTS node."""
+        status = "TERMINAL" if is_terminal else "LIVE"
+        score_labels = {0: "REFUSAL", 1: "PIVOT", 2: "JAILBREAK", -1: "ERROR"}
+        label = score_labels.get(judge_score, "UNKNOWN")
+
+        self._write(f"\n{'='*60}")
+        self._write(f"[NODE:{node_id}] Turn={turn} | Skill={skill} | Parent=[NODE:{parent_id}] | {status}")
+        self._write(f"{'='*60}")
+        self._write(f"\n[NODE:{node_id}] [ATTACKER OUTPUT]")
+        self._write(attacker_prompt)
+        self._write(f"\n[NODE:{node_id}] [TARGET RESPONSE]")
+        self._write(target_response)
+        self._write(f"\n[NODE:{node_id}] [JUDGE] score={judge_score} ({label}) → reward={reward:.2f}")
+        self._write(f"{'='*60}")
+
+    def log_mcts_backprop(self, node_id: int, reward: float):
+        self._write(f"[BACKPROP] Node {node_id} → reward={reward:.2f}")
+
     def close(self):
         if self._f and not self._f.closed:
             self._f.close()
