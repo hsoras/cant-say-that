@@ -187,3 +187,4 @@ mcts_tree.json
 extraction_knowledge.json
 graveyard/
 run_*.log
+.DS_Store

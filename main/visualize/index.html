@@ -1,0 +1,1113 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>MCTS Tree Visualizer</title>
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap');
+
+    :root {
+      --bg:         #0d0f17;
+      --surface:    #13161f;
+      --surface2:   #1b1f2e;
+      --surface3:   #222638;
+      --border:     #2a2f45;
+      --accent:     #6c63ff;
+      --accent2:    #a78bfa;
+      --success:    #22d3a0;
+      --terminal:   #f87171;
+      --warn:       #fbbf24;
+      --text:       #e2e8f0;
+      --text-dim:   #7c8db5;
+      --text-dimmer:#4a5578;
+      --node-r:     26;
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: 'Inter', sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      height: 100vh;
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+    }
+
+    /* ── Header ── */
+    header {
+      display: flex;
+      align-items: center;
+      gap: 16px;
+      padding: 14px 24px;
+      background: var(--surface);
+      border-bottom: 1px solid var(--border);
+      flex-shrink: 0;
+      z-index: 10;
+    }
+
+    .logo {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      font-weight: 700;
+      font-size: 1.1rem;
+      letter-spacing: -0.02em;
+    }
+    .logo-icon {
+      width: 32px; height: 32px;
+      background: linear-gradient(135deg, var(--accent), var(--accent2));
+      border-radius: 8px;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 16px;
+    }
+
+    .file-controls {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      margin-left: auto;
+    }
+
+    .btn {
+      display: inline-flex; align-items: center; gap: 6px;
+      padding: 7px 14px;
+      border-radius: 8px;
+      border: 1px solid var(--border);
+      background: var(--surface2);
+      color: var(--text);
+      font-family: inherit;
+      font-size: 0.83rem;
+      font-weight: 500;
+      cursor: pointer;
+      transition: all .15s ease;
+    }
+    .btn:hover { background: var(--surface3); border-color: var(--accent); color: var(--accent2); }
+    .btn-primary { background: var(--accent); border-color: var(--accent); color: #fff; }
+    .btn-primary:hover { background: #7c75ff; color: #fff; }
+
+    /* ── File dropdown ── */
+    .file-select-wrap {
+      position: relative;
+      display: flex;
+      align-items: center;
+      gap: 0;
+    }
+    #file-select {
+      appearance: none;
+      -webkit-appearance: none;
+      background: var(--surface2);
+      border: 1px solid var(--border);
+      border-right: none;
+      color: var(--text);
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 0.8rem;
+      padding: 7px 32px 7px 12px;
+      border-radius: 8px 0 0 8px;
+      cursor: pointer;
+      outline: none;
+      min-width: 220px;
+      max-width: 300px;
+      transition: border-color .15s;
+    }
+    #file-select:hover, #file-select:focus { border-color: var(--accent); }
+    #file-select option { background: var(--surface3); color: var(--text); }
+    #file-select option:disabled { color: var(--text-dimmer); }
+    .file-select-arrow {
+      position: absolute;
+      right: 72px; /* sits just left of the load button */
+      pointer-events: none;
+      color: var(--text-dim);
+      font-size: 11px;
+    }
+    #btn-load-selected {
+      border-radius: 0 8px 8px 0;
+      border-left: none;
+      padding: 7px 14px;
+    }
+    #btn-load-selected:disabled {
+      opacity: .4;
+      cursor: not-allowed;
+    }
+
+    /* ── Legend ── */
+    .legend {
+      display: flex; align-items: center; gap: 18px;
+      padding: 8px 24px;
+      background: var(--surface);
+      border-bottom: 1px solid var(--border);
+      flex-shrink: 0;
+      font-size: 0.78rem;
+      color: var(--text-dim);
+    }
+    .legend-item { display: flex; align-items: center; gap: 6px; }
+    .legend-dot {
+      width: 12px; height: 12px; border-radius: 50%;
+      flex-shrink: 0;
+    }
+
+    /* ── Stats bar ── */
+    #stats-bar {
+      display: none;
+      gap: 0;
+      background: var(--surface);
+      border-bottom: 1px solid var(--border);
+      flex-shrink: 0;
+    }
+    #stats-bar.visible { display: flex; }
+
+    .stat-pill {
+      display: flex; flex-direction: column; align-items: center;
+      padding: 10px 22px;
+      border-right: 1px solid var(--border);
+      min-width: 110px;
+    }
+    .stat-val { font-size: 1.25rem; font-weight: 700; color: var(--text); }
+    .stat-lbl { font-size: 0.72rem; color: var(--text-dimmer); text-transform: uppercase; letter-spacing: .05em; margin-top: 2px; }
+
+    /* ── Main layout ── */
+    .main {
+      display: flex;
+      flex: 1;
+      overflow: hidden;
+    }
+
+    /* ── SVG canvas ── */
+    #canvas-wrap {
+      flex: 1;
+      position: relative;
+      overflow: hidden;
+      background: var(--bg);
+      background-image:
+        radial-gradient(ellipse 80% 60% at 20% 10%, rgba(108,99,255,.07) 0%, transparent 60%),
+        radial-gradient(ellipse 60% 40% at 80% 80%, rgba(167,139,250,.05) 0%, transparent 60%);
+    }
+
+    #canvas-controls {
+      position: absolute;
+      bottom: 16px; right: 16px;
+      display: flex; flex-direction: column; gap: 6px;
+      z-index: 5;
+    }
+    .ctrl-btn {
+      width: 36px; height: 36px;
+      border-radius: 8px;
+      border: 1px solid var(--border);
+      background: var(--surface2);
+      color: var(--text-dim);
+      font-size: 18px;
+      cursor: pointer;
+      display: flex; align-items: center; justify-content: center;
+      transition: all .15s;
+    }
+    .ctrl-btn:hover { background: var(--surface3); color: var(--text); border-color: var(--accent); }
+
+    #tree-svg {
+      width: 100%; height: 100%;
+      display: block;
+      cursor: grab;
+    }
+    #tree-svg:active { cursor: grabbing; }
+
+    /* SVG node styles */
+    .node-circle {
+      stroke-width: 2.5;
+      cursor: pointer;
+      transition: filter .15s;
+    }
+    .node-circle:hover { filter: brightness(1.25); }
+    .node-circle.selected { stroke-width: 3.5; }
+
+    .node-label {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 9px;
+      fill: #fff;
+      text-anchor: middle;
+      dominant-baseline: central;
+      pointer-events: none;
+      font-weight: 600;
+    }
+    .node-visits {
+      font-family: 'Inter', sans-serif;
+      font-size: 7px;
+      fill: rgba(255,255,255,.7);
+      text-anchor: middle;
+      dominant-baseline: central;
+      pointer-events: none;
+    }
+
+    .edge {
+      stroke: var(--border);
+      stroke-width: 1.5;
+      fill: none;
+      opacity: .6;
+    }
+    .edge.highlighted {
+      stroke: var(--accent2);
+      opacity: 1;
+      stroke-width: 2;
+    }
+
+    /* empty state */
+    #empty-state {
+      position: absolute;
+      inset: 0;
+      display: flex; flex-direction: column; align-items: center; justify-content: center;
+      gap: 16px;
+      color: var(--text-dimmer);
+    }
+    #empty-state .es-icon { font-size: 56px; opacity: .4; }
+    #empty-state h2 { font-size: 1.1rem; font-weight: 600; color: var(--text-dim); }
+    #empty-state p { font-size: 0.85rem; max-width: 320px; text-align: center; line-height: 1.6; }
+
+    /* ── Detail panel ── */
+    #detail-panel {
+      width: 380px;
+      background: var(--surface);
+      border-left: 1px solid var(--border);
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+      flex-shrink: 0;
+      transition: transform .25s ease;
+    }
+    #detail-panel.hidden { transform: translateX(100%); width: 0; border: none; }
+
+    .panel-header {
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 14px 18px;
+      border-bottom: 1px solid var(--border);
+      flex-shrink: 0;
+    }
+    .panel-title {
+      font-size: 0.9rem; font-weight: 600;
+      display: flex; align-items: center; gap: 8px;
+    }
+
+    .badge {
+      display: inline-flex; align-items: center;
+      padding: 2px 8px;
+      border-radius: 20px;
+      font-size: 0.7rem;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: .04em;
+    }
+    .badge-terminal { background: rgba(248,113,113,.15); color: var(--terminal); border: 1px solid rgba(248,113,113,.3); }
+    .badge-success  { background: rgba(34,211,160,.15); color: var(--success); border: 1px solid rgba(34,211,160,.3); }
+    .badge-active   { background: rgba(108,99,255,.15); color: var(--accent2); border: 1px solid rgba(108,99,255,.3); }
+    .badge-winner   { background: rgba(245,158,11,.18); color: #fde68a; border: 1px solid rgba(245,158,11,.5); }
+
+    .close-btn {
+      background: none; border: none; color: var(--text-dim);
+      font-size: 18px; cursor: pointer; padding: 2px 6px; border-radius: 4px;
+    }
+    .close-btn:hover { color: var(--text); background: var(--surface3); }
+
+    .meta-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 10px;
+      padding: 14px 18px;
+      border-bottom: 1px solid var(--border);
+      flex-shrink: 0;
+    }
+    .meta-card {
+      background: var(--surface2);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 10px 12px;
+    }
+    .meta-card-val { font-size: 1.1rem; font-weight: 700; color: var(--text); }
+    .meta-card-lbl { font-size: 0.7rem; color: var(--text-dimmer); margin-top: 2px; text-transform: uppercase; letter-spacing: .05em; }
+
+    .skill-chip {
+      display: inline-flex; align-items: center;
+      background: linear-gradient(135deg, rgba(108,99,255,.2), rgba(167,139,250,.2));
+      border: 1px solid rgba(108,99,255,.4);
+      color: var(--accent2);
+      border-radius: 6px;
+      padding: 3px 10px;
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 0.78rem;
+      font-weight: 500;
+    }
+
+    .conversation-wrap {
+      flex: 1;
+      overflow-y: auto;
+      padding: 14px 18px;
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+    }
+    .conversation-wrap::-webkit-scrollbar { width: 4px; }
+    .conversation-wrap::-webkit-scrollbar-track { background: transparent; }
+    .conversation-wrap::-webkit-scrollbar-thumb { background: var(--border); border-radius: 4px; }
+
+    .conv-section-title {
+      font-size: 0.72rem; font-weight: 600; color: var(--text-dimmer);
+      text-transform: uppercase; letter-spacing: .07em;
+      margin-bottom: 4px;
+    }
+
+    .msg-bubble {
+      border-radius: 10px;
+      padding: 10px 12px;
+      font-size: 0.8rem;
+      line-height: 1.55;
+      white-space: pre-wrap;
+      word-break: break-word;
+    }
+    .msg-user {
+      background: rgba(108,99,255,.12);
+      border: 1px solid rgba(108,99,255,.25);
+      color: var(--text);
+      align-self: flex-end;
+    }
+    .msg-user::before {
+      content: '👤 User';
+      display: block; font-size: 0.68rem; font-weight: 600;
+      color: var(--accent2); margin-bottom: 6px; letter-spacing: .04em;
+    }
+    .msg-assistant {
+      background: var(--surface2);
+      border: 1px solid var(--border);
+      color: var(--text);
+      align-self: flex-start;
+    }
+    .msg-assistant::before {
+      content: '🤖 Assistant';
+      display: block; font-size: 0.68rem; font-weight: 600;
+      color: var(--success); margin-bottom: 6px; letter-spacing: .04em;
+    }
+
+    /* ── Hidden file inputs ── */
+    #file-input { display: none; }
+    #folder-input { display: none; }
+
+    /* ── Scrollbar global ── */
+    ::-webkit-scrollbar { width: 4px; height: 4px; }
+    ::-webkit-scrollbar-track { background: transparent; }
+    ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 4px; }
+
+    /* ── Tooltip ── */
+    #tooltip {
+      position: fixed;
+      pointer-events: none;
+      background: var(--surface3);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 8px 12px;
+      font-size: 0.78rem;
+      color: var(--text);
+      z-index: 100;
+      opacity: 0;
+      transition: opacity .1s;
+      white-space: nowrap;
+      box-shadow: 0 4px 24px rgba(0,0,0,.4);
+    }
+    #tooltip.visible { opacity: 1; }
+
+    /* ── Reward bar ── */
+    .reward-bar-wrap {
+      background: var(--surface2);
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      height: 6px;
+      overflow: hidden;
+      margin-top: 6px;
+    }
+    .reward-bar-fill {
+      height: 100%;
+      border-radius: 6px;
+      background: linear-gradient(90deg, var(--accent), var(--success));
+      transition: width .3s;
+    }
+  </style>
+</head>
+<body>
+
+<header>
+  <div class="logo">
+    <div class="logo-icon">🌲</div>
+    MCTS Tree Visualizer
+  </div>
+  <div class="file-controls">
+    <!-- Step 1: pick the mcts_store folder -->
+    <label class="btn" for="folder-input" id="btn-pick-folder" title="Open the mcts_store folder">
+      📁 Open Folder
+    </label>
+    <input type="file" id="folder-input" webkitdirectory accept=".json" />
+
+    <!-- Step 2: pick from dropdown, then load -->
+    <div class="file-select-wrap" id="file-select-wrap" style="display:none">
+      <select id="file-select">
+        <option value="" disabled selected>— select a tree file —</option>
+      </select>
+      <span class="file-select-arrow">▾</span>
+      <button class="btn btn-primary" id="btn-load-selected" disabled>Load ↗</button>
+    </div>
+
+    <!-- Fallback: single file picker -->
+    <label class="btn" for="file-input" title="Or open a single JSON file directly" style="opacity:.6;font-size:.76rem;">
+      or pick file…
+    </label>
+    <input type="file" id="file-input" accept=".json" />
+  </div>
+</header>
+
+<div class="legend">
+  <div class="legend-item">
+    <div class="legend-dot" style="background:#f59e0b;box-shadow:0 0 8px #f59e0bcc;border:2px solid #fde68a"></div>
+    🏆 Winner (best reward)
+  </div>
+  <div class="legend-item">
+    <div class="legend-dot" style="background:#6c63ff;box-shadow:0 0 6px #6c63ff88"></div>
+    Root / Active node
+  </div>
+  <div class="legend-item">
+    <div class="legend-dot" style="background:#f87171;box-shadow:0 0 6px #f8717188"></div>
+    Terminal (dead end)
+  </div>
+  <div class="legend-item">
+    <div class="legend-dot" style="background:#22d3a0;box-shadow:0 0 6px #22d3a088"></div>
+    High reward (&gt; 60% of max)
+  </div>
+  <div class="legend-item">
+    <div class="legend-dot" style="background:#fbbf24;box-shadow:0 0 6px #fbbf2488"></div>
+    Medium reward
+  </div>
+  <div class="legend-item">
+    <div class="legend-dot" style="background:#475569"></div>
+    Low reward / unexplored
+  </div>
+  <span style="margin-left:auto;font-size:.75rem;">Node size = visit count · Click to inspect</span>
+</div>
+
+<div id="stats-bar">
+  <div class="stat-pill">
+    <span class="stat-val" id="s-nodes">-</span>
+    <span class="stat-lbl">Total Nodes</span>
+  </div>
+  <div class="stat-pill">
+    <span class="stat-val" id="s-depth">-</span>
+    <span class="stat-lbl">Max Depth</span>
+  </div>
+  <div class="stat-pill">
+    <span class="stat-val" id="s-terminal">-</span>
+    <span class="stat-lbl">Terminal</span>
+  </div>
+  <div class="stat-pill">
+    <span class="stat-val" id="s-success">-</span>
+    <span class="stat-lbl">High Reward (&gt;60%)</span>
+  </div>
+  <div class="stat-pill">
+    <span class="stat-val" id="s-visits">-</span>
+    <span class="stat-lbl">Root Visits</span>
+  </div>
+  <div class="stat-pill">
+    <span class="stat-val" id="s-maxreward">-</span>
+    <span class="stat-lbl">🏆 Winner Path Sum</span>
+  </div>
+</div>
+
+<div class="main">
+  <div id="canvas-wrap">
+    <div id="empty-state">
+      <div class="es-icon">🌿</div>
+      <h2>No tree loaded</h2>
+      <p>Click <strong>📁 Open Folder</strong> and select the <code>main/</code> directory (one level above <code>mcts_store</code>) — this auto-loads <code>skills.json</code> and lists all tree files in the dropdown. Then pick one and hit <strong>Load ↗</strong>.</p>
+    </div>
+
+    <svg id="tree-svg" style="display:none;">
+      <defs>
+        <filter id="glow-green" x="-50%" y="-50%" width="200%" height="200%">
+          <feGaussianBlur stdDeviation="4" result="blur"/>
+          <feMerge><feMergeNode in="blur"/><feMergeNode in="SourceGraphic"/></feMerge>
+        </filter>
+        <filter id="glow-red" x="-50%" y="-50%" width="200%" height="200%">
+          <feGaussianBlur stdDeviation="3" result="blur"/>
+          <feMerge><feMergeNode in="blur"/><feMergeNode in="SourceGraphic"/></feMerge>
+        </filter>
+        <filter id="glow-purple" x="-50%" y="-50%" width="200%" height="200%">
+          <feGaussianBlur stdDeviation="5" result="blur"/>
+          <feMerge><feMergeNode in="blur"/><feMergeNode in="SourceGraphic"/></feMerge>
+        </filter>
+        <filter id="glow-gold" x="-60%" y="-60%" width="220%" height="220%">
+          <feGaussianBlur stdDeviation="6" result="blur"/>
+          <feMerge><feMergeNode in="blur"/><feMergeNode in="SourceGraphic"/></feMerge>
+        </filter>
+      </defs>
+      <g id="tree-root-g"></g>
+    </svg>
+
+    <div id="canvas-controls">
+      <button class="ctrl-btn" id="btn-zoom-in" title="Zoom In">+</button>
+      <button class="ctrl-btn" id="btn-zoom-out" title="Zoom Out">−</button>
+      <button class="ctrl-btn" id="btn-reset" title="Reset View" style="font-size:13px;">⟳</button>
+      <button class="ctrl-btn" id="btn-fit" title="Fit Tree" style="font-size:13px;">⛶</button>
+    </div>
+  </div>
+
+  <div id="detail-panel" class="hidden">
+    <div class="panel-header">
+      <div class="panel-title">
+        <span id="panel-node-id">Node #</span>
+        <span id="panel-badge"></span>
+      </div>
+      <button class="close-btn" id="panel-close">✕</button>
+    </div>
+
+    <div class="meta-grid">
+      <div class="meta-card">
+        <div class="meta-card-val" id="d-visits">-</div>
+        <div class="meta-card-lbl">Visits</div>
+      </div>
+      <div class="meta-card">
+        <div class="meta-card-val" id="d-reward">-</div>
+        <div class="meta-card-lbl">Total Reward</div>
+        <div class="reward-bar-wrap"><div class="reward-bar-fill" id="d-reward-bar" style="width:0%"></div></div>
+      </div>
+      <div class="meta-card">
+        <div class="meta-card-val" id="d-turn">-</div>
+        <div class="meta-card-lbl">Turn #</div>
+      </div>
+      <div class="meta-card">
+        <div class="meta-card-val" id="d-children">-</div>
+        <div class="meta-card-lbl">Children</div>
+      </div>
+    </div>
+
+    <div style="padding: 10px 18px; border-bottom: 1px solid var(--border); flex-shrink:0; display:flex; align-items:center; gap:10px;">
+      <span style="font-size:.72rem;color:var(--text-dimmer);text-transform:uppercase;letter-spacing:.05em;">Skill Used</span>
+      <span id="d-skill" class="skill-chip">—</span>
+    </div>
+
+    <div class="conversation-wrap" id="conversation-wrap">
+      <p style="color:var(--text-dimmer);font-size:.82rem;">Select a node to view its conversation.</p>
+    </div>
+  </div>
+</div>
+
+<div id="tooltip"></div>
+
+<script>
+// ─────────────────────────────────────────────
+//  State
+// ─────────────────────────────────────────────
+let treeData   = null;
+let allNodes   = [];
+let maxReward  = 1;
+let maxVisits  = 1;
+let selectedId = null;
+
+// Pan/zoom state
+let transform = { x: 0, y: 0, scale: 1 };
+let isDragging = false;
+let dragStart  = { x: 0, y: 0 };
+
+// Map of filename -> File object collected from folder picker
+const fileRegistry = {};
+
+// ID of the winning terminal node (highest cumulative path reward)
+let bestNodeId = null;
+
+// ─────────────────────────────────────────────
+//  Skills lookup
+// ─────────────────────────────────────────────
+let skillsMap = {};  // { 'H1': 'Confirmation Fishing', ... }
+
+function parseSkillsJson(data) {
+  skillsMap = {};
+  const addSkills = arr => arr.forEach(s => { skillsMap[s.id] = s.name; });
+  if (data.low_level_skills) Object.values(data.low_level_skills).forEach(addSkills);
+  if (data.high_level_patterns) Object.values(data.high_level_patterns).forEach(addSkills);
+}
+
+function skillLabel(id) {
+  if (!id) return '—';
+  const name = skillsMap[id];
+  return name ? `${id} · ${name}` : id;
+}
+
+// ─────────────────────────────────────────────
+//  Folder picker  →  populate dropdown
+// ─────────────────────────────────────────────
+document.getElementById('folder-input').addEventListener('change', e => {
+  const allFiles = Array.from(e.target.files);
+  const jsonFiles = allFiles.filter(f => f.name.endsWith('.json'));
+  if (!jsonFiles.length) {
+    alert('No JSON files found in the selected folder.');
+    return;
+  }
+
+  // Auto-load skills.json if present anywhere in the selection
+  const skillsFile = allFiles.find(f => f.name === 'skills.json');
+  if (skillsFile) {
+    const r = new FileReader();
+    r.onload = ev => { try { parseSkillsJson(JSON.parse(ev.target.result)); } catch(_) {} };
+    r.readAsText(skillsFile);
+  }
+
+  // Store tree file refs (exclude skills.json from tree dropdown)
+  const treeFiles = jsonFiles.filter(f => f.name !== 'skills.json');
+  treeFiles.forEach(f => fileRegistry[f.name] = f);
+
+  // Populate dropdown
+  const select = document.getElementById('file-select');
+  select.innerHTML = '<option value="" disabled selected>— select a tree file —</option>';
+  treeFiles
+    .sort((a, b) => a.name.localeCompare(b.name))
+    .forEach(f => {
+      const opt = document.createElement('option');
+      opt.value = f.name;
+      opt.textContent = f.name.replace('.json', '');
+      select.appendChild(opt);
+    });
+
+  document.getElementById('file-select-wrap').style.display = 'flex';
+  document.getElementById('btn-load-selected').disabled = true;
+  e.target.value = ''; // allow re-selecting same folder
+});
+
+document.getElementById('file-select').addEventListener('change', () => {
+  document.getElementById('btn-load-selected').disabled = false;
+});
+
+document.getElementById('btn-load-selected').addEventListener('click', () => {
+  const name = document.getElementById('file-select').value;
+  if (!name || !fileRegistry[name]) return;
+  loadFileObject(fileRegistry[name]);
+});
+
+// ─────────────────────────────────────────────
+//  Fallback: single file picker
+// ─────────────────────────────────────────────
+document.getElementById('file-input').addEventListener('change', e => {
+  const file = e.target.files[0];
+  if (!file) return;
+  loadFileObject(file);
+  e.target.value = '';
+});
+
+function loadFileObject(file) {
+  const reader = new FileReader();
+  reader.onload = ev => {
+    try {
+      treeData = JSON.parse(ev.target.result);
+      // Update dropdown selection label to reflect what's loaded
+      const select = document.getElementById('file-select');
+      if (select.value !== file.name) {
+        // came from fallback picker — add to dropdown if not there
+        if (!document.querySelector(`#file-select option[value="${file.name}"]`)) {
+          fileRegistry[file.name] = file;
+          const opt = document.createElement('option');
+          opt.value = file.name;
+          opt.textContent = file.name.replace('.json', '');
+          select.appendChild(opt);
+          document.getElementById('file-select-wrap').style.display = 'flex';
+        }
+        select.value = file.name;
+        document.getElementById('btn-load-selected').disabled = false;
+      }
+      processTree();
+    } catch(err) {
+      alert('Failed to parse JSON: ' + err.message);
+    }
+  };
+  reader.readAsText(file);
+}
+
+// ─────────────────────────────────────────────
+//  Tree Processing
+// ─────────────────────────────────────────────
+function processTree() {
+  allNodes = [];
+  flattenNodes(treeData, null, 0);
+
+  maxReward = Math.max(1, ...allNodes.map(n => n.total_reward));
+  maxVisits = Math.max(1, ...allNodes.map(n => n.visits));
+
+  // Build id→node map for path walking
+  const nodeMap = {};
+  allNodes.forEach(n => nodeMap[n.node_id] = n);
+
+  // Compute _pathReward = sum of total_reward from root down to this node
+  allNodes.forEach(n => {
+    let sum = 0, cur = n;
+    while (cur) {
+      sum += cur.total_reward;
+      cur = cur._parentId != null ? nodeMap[cur._parentId] : null;
+    }
+    n._pathReward = sum;
+  });
+
+  // Winner = terminal node with the highest path reward
+  const terminalNodes = allNodes.filter(n => n.is_terminal);
+  const winnerNode = terminalNodes.length
+    ? terminalNodes.reduce((a, b) => b._pathReward > a._pathReward ? b : a, terminalNodes[0])
+    : null;
+  bestNodeId = winnerNode ? winnerNode.node_id : null;
+
+  // Stats
+  const totalNodes  = allNodes.length;
+  const maxDepth    = Math.max(...allNodes.map(n => n._depth));
+  const terminalCnt = terminalNodes.length;
+  const successCnt  = allNodes.filter(n => n.total_reward / maxReward > 0.6).length;
+  const rootVisits  = treeData.visits;
+
+  document.getElementById('s-nodes').textContent    = totalNodes;
+  document.getElementById('s-depth').textContent    = maxDepth;
+  document.getElementById('s-terminal').textContent = terminalCnt;
+  document.getElementById('s-success').textContent  = successCnt;
+  document.getElementById('s-visits').textContent   = rootVisits;
+  document.getElementById('s-maxreward').textContent =
+    winnerNode ? `${winnerNode._pathReward.toFixed(1)} (#${winnerNode.node_id})` : maxReward.toFixed(1);
+
+  document.getElementById('stats-bar').classList.add('visible');
+
+  // Layout
+  layoutTree();
+  renderTree();
+  fitTree();
+}
+
+function flattenNodes(node, parentId, depth) {
+  node._parentId = parentId;
+  node._depth    = depth;
+  node._childrenCount = (node.children || []).length;
+  allNodes.push(node);
+  (node.children || []).forEach(c => flattenNodes(c, node.node_id, depth + 1));
+}
+
+// ─────────────────────────────────────────────
+//  Layout — Reingold-Tilford style (simple BFS)
+// ─────────────────────────────────────────────
+const H_GAP = 90;   // vertical gap between levels
+const W_GAP = 62;   // min horizontal gap between siblings
+
+function layoutTree() {
+  // Assign positions depth-first
+  const byDepth = {};
+  allNodes.forEach(n => {
+    if (!byDepth[n._depth]) byDepth[n._depth] = [];
+    byDepth[n._depth].push(n);
+  });
+
+  // Build subtree width map (leaf = 1)
+  const width = {};
+  const nodeMap = {};
+  allNodes.forEach(n => nodeMap[n.node_id] = n);
+
+  function subtreeWidth(node) {
+    if (!node.children || node.children.length === 0) {
+      width[node.node_id] = 1;
+      return 1;
+    }
+    let total = 0;
+    node.children.forEach(c => { total += subtreeWidth(c); });
+    width[node.node_id] = total;
+    return total;
+  }
+  subtreeWidth(treeData);
+
+  function assignX(node, leftOffset) {
+    const w = width[node.node_id];
+    node._x = (leftOffset + w / 2) * W_GAP;
+    let cursor = leftOffset;
+    (node.children || []).forEach(c => {
+      assignX(c, cursor);
+      cursor += width[c.node_id];
+    });
+  }
+  assignX(treeData, 0);
+
+  allNodes.forEach(n => { n._y = n._depth * H_GAP; });
+}
+
+// ─────────────────────────────────────────────
+//  Node Colour
+// ─────────────────────────────────────────────
+function nodeColor(node) {
+  // 🏆 Winner — highest total_reward in the whole tree
+  if (node.node_id === bestNodeId) return { fill: '#f59e0b', stroke: '#fde68a', filter: 'url(#glow-gold)' };
+  if (node.is_terminal) return { fill: '#f87171', stroke: '#fca5a5', filter: 'url(#glow-red)' };
+  const ratio = node.total_reward / maxReward;
+  if (ratio > 0.6) return { fill: '#22d3a0', stroke: '#6ee7c4', filter: 'url(#glow-green)' };
+  if (ratio > 0.3) return { fill: '#fbbf24', stroke: '#fde68a', filter: 'none' };
+  if (node._depth === 0) return { fill: '#6c63ff', stroke: '#a78bfa', filter: 'url(#glow-purple)' };
+  return { fill: '#334155', stroke: '#475569', filter: 'none' };
+}
+
+function nodeRadius(node) {
+  const base = 14;
+  const extra = Math.sqrt(node.visits / maxVisits) * 12;
+  return Math.min(base + extra, 30);
+}
+
+// ─────────────────────────────────────────────
+//  Render
+// ─────────────────────────────────────────────
+function renderTree() {
+  const svg  = document.getElementById('tree-svg');
+  const g    = document.getElementById('tree-root-g');
+  const empty = document.getElementById('empty-state');
+
+  svg.style.display = 'block';
+  empty.style.display = 'none';
+  g.innerHTML = '';
+
+  const nodeMap = {};
+  allNodes.forEach(n => nodeMap[n.node_id] = n);
+
+  // Draw edges first
+  allNodes.forEach(node => {
+    if (!node._parentId) return;
+    const parent = nodeMap[node._parentId];
+    const line = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+    const x1 = parent._x, y1 = parent._y;
+    const x2 = node._x,   y2 = node._y;
+    const mid = (y1 + y2) / 2;
+    line.setAttribute('d', `M${x1},${y1} C${x1},${mid} ${x2},${mid} ${x2},${y2}`);
+    line.setAttribute('class', 'edge');
+    line.dataset.child = node.node_id;
+    g.appendChild(line);
+  });
+
+  // Draw nodes
+  allNodes.forEach(node => {
+    const col = nodeColor(node);
+    const r   = nodeRadius(node);
+
+    const grp = document.createElementNS('http://www.w3.org/2000/svg', 'g');
+    grp.dataset.nodeId = node.node_id;
+
+    const circle = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
+    circle.setAttribute('cx', node._x);
+    circle.setAttribute('cy', node._y);
+    circle.setAttribute('r', r);
+    circle.setAttribute('fill', col.fill);
+    circle.setAttribute('stroke', col.stroke);
+    circle.setAttribute('class', 'node-circle');
+    if (col.filter !== 'none') circle.setAttribute('filter', col.filter);
+    circle.dataset.nodeId = node.node_id;
+
+    const lbl = document.createElementNS('http://www.w3.org/2000/svg', 'text');
+    lbl.setAttribute('x', node._x);
+    lbl.setAttribute('y', node._y - (r > 18 ? 4 : 2));
+    lbl.setAttribute('class', 'node-label');
+    lbl.textContent = '#' + node.node_id;
+
+    const visits = document.createElementNS('http://www.w3.org/2000/svg', 'text');
+    visits.setAttribute('x', node._x);
+    visits.setAttribute('y', node._y + (r > 18 ? 7 : 5));
+    visits.setAttribute('class', 'node-visits');
+    visits.textContent = 'v' + node.visits;
+
+    grp.appendChild(circle);
+    grp.appendChild(lbl);
+    grp.appendChild(visits);
+
+    // Crown emoji above the winner node
+    if (node.node_id === bestNodeId) {
+      const crown = document.createElementNS('http://www.w3.org/2000/svg', 'text');
+      crown.setAttribute('x', node._x);
+      crown.setAttribute('y', node._y - r - 6);
+      crown.setAttribute('text-anchor', 'middle');
+      crown.setAttribute('dominant-baseline', 'auto');
+      crown.setAttribute('font-size', '14');
+      crown.setAttribute('pointer-events', 'none');
+      crown.textContent = '🏆';
+      grp.appendChild(crown);
+    }
+
+    // Events
+    grp.addEventListener('click', () => selectNode(node));
+    grp.addEventListener('mouseenter', ev => showTooltip(ev, node));
+    grp.addEventListener('mouseleave', hideTooltip);
+    grp.addEventListener('mousemove', ev => moveTooltip(ev));
+
+    g.appendChild(grp);
+  });
+
+  applyTransform();
+}
+
+// ─────────────────────────────────────────────
+//  Selection
+// ─────────────────────────────────────────────
+function selectNode(node) {
+  selectedId = node.node_id;
+
+  // Highlight edges on path to root
+  document.querySelectorAll('.edge').forEach(e => e.classList.remove('highlighted'));
+  let cur = node;
+  const nodeMap = {};
+  allNodes.forEach(n => nodeMap[n.node_id] = n);
+  while (cur._parentId) {
+    const edge = document.querySelector(`.edge[data-child="${cur.node_id}"]`);
+    if (edge) edge.classList.add('highlighted');
+    cur = nodeMap[cur._parentId];
+  }
+
+  // Update panel
+  const panel = document.getElementById('detail-panel');
+  panel.classList.remove('hidden');
+
+  document.getElementById('panel-node-id').textContent = `Node #${node.node_id}`;
+
+  const badge = document.getElementById('panel-badge');
+  if (node.node_id === bestNodeId) {
+    badge.className = 'badge badge-winner';
+    badge.textContent = '🏆 Winner';
+  } else if (node.is_terminal) {
+    badge.className = 'badge badge-terminal';
+    badge.textContent = 'Terminal';
+  } else if (node.total_reward / maxReward > 0.6) {
+    badge.className = 'badge badge-success';
+    badge.textContent = 'High Reward';
+  } else {
+    badge.className = 'badge badge-active';
+    badge.textContent = 'Active';
+  }
+
+  document.getElementById('d-visits').textContent  = node.visits;
+  document.getElementById('d-reward').textContent  = node.total_reward.toFixed(2);
+  document.getElementById('d-turn').textContent    = node.turn_number;
+  document.getElementById('d-children').textContent = (node.children || []).length;
+
+  const rewardPct = Math.min(100, (node.total_reward / maxReward) * 100);
+  document.getElementById('d-reward-bar').style.width = rewardPct + '%';
+
+  const skillEl = document.getElementById('d-skill');
+  skillEl.textContent = skillLabel(node.skill_used);
+
+  // Conversation
+  const wrap = document.getElementById('conversation-wrap');
+  wrap.innerHTML = '';
+
+  const history = node.conversation_history || [];
+  if (history.length === 0) {
+    wrap.innerHTML = '<p style="color:var(--text-dimmer);font-size:.82rem;">No conversation (root node).</p>';
+  } else {
+    const titleEl = document.createElement('div');
+    titleEl.className = 'conv-section-title';
+    titleEl.textContent = `Conversation · ${history.length} messages · Turn ${node.turn_number}`;
+    wrap.appendChild(titleEl);
+
+    history.forEach(msg => {
+      const bubble = document.createElement('div');
+      bubble.className = 'msg-bubble ' + (msg.role === 'user' ? 'msg-user' : 'msg-assistant');
+      bubble.textContent = msg.content;
+      wrap.appendChild(bubble);
+    });
+  }
+
+  wrap.scrollTop = 0;
+}
+
+document.getElementById('panel-close').addEventListener('click', () => {
+  document.getElementById('detail-panel').classList.add('hidden');
+  document.querySelectorAll('.edge').forEach(e => e.classList.remove('highlighted'));
+  selectedId = null;
+});
+
+// ─────────────────────────────────────────────
+//  Tooltip
+// ─────────────────────────────────────────────
+const tooltip = document.getElementById('tooltip');
+
+function showTooltip(ev, node) {
+  const ratio = node.total_reward / maxReward;
+  const isWinner = node.node_id === bestNodeId;
+  const status = isWinner ? '🏆 Winner' : node.is_terminal ? '🔴 Terminal' : ratio > 0.6 ? '🟢 High Reward' : ratio > 0.3 ? '🟡 Mid Reward' : '⚫ Low';
+  tooltip.innerHTML = `
+    <strong>Node #${node.node_id}</strong> · Turn ${node.turn_number}<br>
+    Reward: <b>${node.total_reward}</b> · Path sum: <b>${node._pathReward != null ? node._pathReward.toFixed(1) : '?'}</b><br>
+    Skill: <b>${skillLabel(node.skill_used)}</b> · ${status}<br>
+    Visits: <b>${node.visits}</b> · Children: <b>${(node.children||[]).length}</b>
+  `;
+  moveTooltip(ev);
+  tooltip.classList.add('visible');
+}
+function hideTooltip()   { tooltip.classList.remove('visible'); }
+function moveTooltip(ev) {
+  tooltip.style.left = (ev.clientX + 14) + 'px';
+  tooltip.style.top  = (ev.clientY + 14) + 'px';
+}
+
+// ─────────────────────────────────────────────
+//  Pan & Zoom
+// ─────────────────────────────────────────────
+function applyTransform() {
+  const g = document.getElementById('tree-root-g');
+  g.setAttribute('transform', `translate(${transform.x},${transform.y}) scale(${transform.scale})`);
+}
+
+const svg = document.getElementById('tree-svg');
+
+svg.addEventListener('mousedown', e => {
+  if (e.target === svg || e.target === document.getElementById('tree-root-g')) {
+    isDragging = true;
+    dragStart = { x: e.clientX - transform.x, y: e.clientY - transform.y };
+    e.preventDefault();
+  }
+});
+window.addEventListener('mousemove', e => {
+  if (!isDragging) return;
+  transform.x = e.clientX - dragStart.x;
+  transform.y = e.clientY - dragStart.y;
+  applyTransform();
+});
+window.addEventListener('mouseup', () => { isDragging = false; });
+
+svg.addEventListener('wheel', e => {
+  e.preventDefault();
+  const factor = e.deltaY < 0 ? 1.12 : 0.89;
+  const rect = svg.getBoundingClientRect();
+  const mx = e.clientX - rect.left;
+  const my = e.clientY - rect.top;
+
+  transform.x = mx - factor * (mx - transform.x);
+  transform.y = my - factor * (my - transform.y);
+  transform.scale *= factor;
+  applyTransform();
+}, { passive: false });
+
+document.getElementById('btn-zoom-in').addEventListener('click', () => {
+  transform.scale *= 1.2; applyTransform();
+});
+document.getElementById('btn-zoom-out').addEventListener('click', () => {
+  transform.scale /= 1.2; applyTransform();
+});
+document.getElementById('btn-reset').addEventListener('click', () => {
+  transform = { x: 0, y: 0, scale: 1 }; applyTransform();
+});
+document.getElementById('btn-fit').addEventListener('click', fitTree);
+
+function fitTree() {
+  if (!allNodes.length) return;
+  const svg    = document.getElementById('tree-svg');
+  const rect   = svg.getBoundingClientRect();
+  const xs     = allNodes.map(n => n._x);
+  const ys     = allNodes.map(n => n._y);
+  const minX   = Math.min(...xs) - 50;
+  const maxX   = Math.max(...xs) + 50;
+  const minY   = Math.min(...ys) - 50;
+  const maxY   = Math.max(...ys) + 50;
+  const treeW  = maxX - minX;
+  const treeH  = maxY - minY;
+  const scaleX = rect.width  / treeW;
+  const scaleY = rect.height / treeH;
+  const scale  = Math.min(scaleX, scaleY, 1.5) * 0.9;
+  transform.scale = scale;
+  transform.x = (rect.width  - treeW * scale) / 2 - minX * scale;
+  transform.y = (rect.height - treeH * scale) / 2 - minY * scale + 30;
+  applyTransform();
+}
+</script>
+</body>
+</html>
