@@ -39,3 +39,6 @@ I used `nousresearch/hermes-4-70b` as the attacker, `meta-llama/llama-3.3-70b-in
 - Change the node expansion so it so it has some thought process or scoring mechanism for which skill to pick next instead of picking a random unused one.
 - Do more iterations of the attack with different skills and compile which skills have been the most successful.
 - Try against better target models and see how my attack holds up.
+
+# Successful Attack
+Go to `successful_run.md` to see the transcript of the successful jailbreak.
