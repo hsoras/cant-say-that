@@ -186,5 +186,6 @@ __marimo__/
 mcts_tree.json
 extraction_knowledge.json
 graveyard/
-run_*.log
+logs/
 .DS_Store
+goal.json
