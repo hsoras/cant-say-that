@@ -185,6 +185,7 @@ __marimo__/
 
 mcts_tree.json
 extraction_knowledge.json
+mcts_extraction_knowledge.json
 graveyard/
 logs/
 .DS_Store

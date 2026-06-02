@@ -333,6 +333,7 @@ if __name__ == "__main__":
                 max_iterations=max_iterations,
                 max_turns=max_turns,
                 branch_factor=branch_factor,
+                target_backend=os.environ.get("TARGET_BACKEND", "openrouter"),
             )
         )
     elif fuzzer_mode == "standard":

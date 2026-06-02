@@ -24,8 +24,12 @@ def _build_target_runner():
     if backend == "manual":
         logger.info("Target backend: manual paste mode")
         return _manual_target
+    if backend == "web":
+        logger.info("Target backend: web UI clipboard bridge")
+        from utils.web_target import build_web_target_runner
+        return build_web_target_runner()
     if backend not in ("ollama", "openrouter"):
-        raise ValueError(f"Unknown TARGET_BACKEND={backend!r}. Use 'manual', 'ollama', or 'openrouter'.")
+        raise ValueError(f"Unknown TARGET_BACKEND={backend!r}. Use 'manual', 'web', 'ollama', or 'openrouter'.")
 
     timeout_s = int(os.environ.get("TARGET_TIMEOUT_SECONDS", "180"))
     framing = os.environ.get("TARGET_FRAMING", "lab").strip().lower()
