@@ -11,6 +11,8 @@ This is the LLM which is being attacked.
 This is the LLM which evaluates the response of the target LLM and decides whether the goal was completed or not. It takes in a target response and some criteria, then outputs a 0 for hard refusal, 2 for a successful jailbreak, and 1 for anything else. 
 ## MCTS Scoring
 The Attacker LLM uses a variety of persuation techniques, which each have a score. When a technique is used, the score table takes note of its usage and how effective it was.
+## UCB Table
+When picking a persuation skill to use for the next attack, we use a UCB table with each row having a persuation skill. For the node expansion step, we pick the top 3 skills from the UCB table.
 
 # Attack Process
 The attack proceeds in a series of turns. In each turn:
@@ -18,7 +20,7 @@ The attack proceeds in a series of turns. In each turn:
 2. The Target LLM responds to the prompt. 
 3. The Judge LLM evaluates the response of the Target LLM and decides whether the goal was completed or not.
 4. If the judge detects a jailbreak, we have succeeded. If the judge detects a hard refusal, node is terminal and we do not continue that branch. Otherwise, we can continue the branch.
-5. The next iteration begins by resetting back to the Root Node. The algorithm uses the updated UCB scores to traverse down the existing tree until it finds a promising, un-exhausted node to expand with 3 unused persuasion techniques. 
+5. The next iteration begins by resetting back to the Root Node. The algorithm uses the updated UCB scores to traverse down the existing tree until it finds a promising, un-exhausted node to expand with 3 persuasion techniques with the highest UCB scores. 
 
 # Inspiration
 The architecture is based on this paper, which uses a similar apprach to try to leak an LLM's system prompt: https://arxiv.org/abs/2601.21233. Howvever, I have repurposed it to try to break a target's safety features. I have also modified their scoring from using just a UCB table to a Monte Carlo Search Tree. 
@@ -33,12 +35,12 @@ The architecture is based on this paper, which uses a similar apprach to try to 
 If you have a good run, open it with `index.html` in `visualization/`. It will let you select a `mcts_tree.json` file and it will display the attack tree in a browsable format. 
 
 # Experimental Setup
-I used `nousresearch/hermes-4-70b` as the attacker, `meta-llama/llama-3.3-70b-instruct` as the judge, and `meta-llama/llama-3.3-70b-instruct` as the target. I got a successful jailbreak in 87 queries, with the winning conversation having 4 prompts to the target. That conversation is in `logs/` directory.
+I used `nousresearch/hermes-4-70b` as the attacker and `deepseek/deepseek-v4-flash` as the judge. I have gotten successful jailbreaks on `meta-llama/llama-3.3-70b-instruct`, `deepseek/deepseek-v4-flash`, and `openai/chatgpt-4o` as the target. I got a successful jailbreak in 87 queries, with the winning conversation having 4 prompts to the target. That conversation is in `logs/` directory. I have plans to run full benchmarks with AdvBench or Jailbreak bench to test its capabilities. As of now I have been using it on CTF challenges and cannot publish the jailbreak examples yet.
 
 # Next Steps
-- Change the node expansion so it so it has some thought process or scoring mechanism for which skill to pick next instead of picking a random unused one.
 - Do more iterations of the attack with different skills and compile which skills have been the most successful.
-- Try against better target models and see how my attack holds up.
+- Try against better target models (claude ones) and see how my attack holds up.
+- Run my attack on a jailbreak benchmark like JailbreakBench or AdvBench
 
 # Successful Attack
 Go to `successful_run.md` to see the transcript of the successful jailbreak.
