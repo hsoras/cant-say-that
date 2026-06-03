@@ -12,6 +12,7 @@ from utils.ui import _print_turn_trace_header, _print_attacker_input
 from utils.target_runner import _build_target_runner
 from utils.logger import _configure_logging
 from utils.convo_logger import ConvoLogger
+from utils.bofn_augmenter import BoNAugmenter
 
 logger = logging.getLogger(__name__)
 KNOWLEDGE_FILE = Path(__file__).resolve().parent / "extraction_knowledge.json"
@@ -237,6 +238,9 @@ Apply these exact psychological tactics in your next message to the Target:
             _print_turn_trace_header(turn)
             _print_attacker_input([], full_prompt)
             payload, _ = attacker.generate_prompt(full_prompt, [], turn=turn)
+            # scramble the text a bit
+            augmenter = BoNAugmenter()
+            payload = augmenter.process_prompt(payload)
             print(f"\n[ATTACKER → TARGET]\n{payload}")
             clog.log_attacker(full_prompt, payload)
 

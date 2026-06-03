@@ -22,6 +22,7 @@ from utils.load_skills import load_skills
 from utils.openrouter_async import _get_async_client, async_chat_completion
 from utils.convo_logger import ConvoLogger
 from utils.ucb_score import calculate_ucb_score
+from utils.bofn_augmenter import BoNAugmenter
 
 logger = logging.getLogger(__name__)
 
@@ -510,6 +511,8 @@ async def _expand(
         )
         # Clean up attacker output
         attacker_msg = _extract_prompt_text(attacker_msg)
+        augmenter = BoNAugmenter()
+        attacker_msg = augmenter.process_prompt(attacker_msg)
 
         child_history = list(node.conversation_history) + [
             {"role": "user", "content": attacker_msg}
